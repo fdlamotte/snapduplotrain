@@ -3,10 +3,11 @@ const poweredUP = new PoweredUP.PoweredUP();
 const http = require('http');
 const url = require('url');
 const fs = require('fs');
+const log = false;
 
-var i = 0;
 var duploTrain;
 var lastColor = 0;
+var lastSpeed = 0;
 
 poweredUP.on("discover", async (hub) => { // Wait to discover a Hub
 
@@ -17,8 +18,13 @@ poweredUP.on("discover", async (hub) => { // Wait to discover a Hub
     await hub.sleep(3000); // Sleep for 3 seconds before starting
 
 	hub.on("color", async (port, color) => {
-		console.log("color event %d", color);
+		if (log) console.log("color event %d", color);
 		lastColor = color;
+	});
+
+	hub.on("speed", async (port, speed) => {
+		if (log) console.log("speed evend %d", speed);
+		lastSpeed = speed;
 	});
 
 	duploTrain = hub;
@@ -81,29 +87,29 @@ http.createServer(function (req, res) {
 		if (pathname.startsWith ("/setMotor")) {
 			if (duploTrain != null) 
 				duploTrain.setMotorSpeed("MOTOR", q.s, q.t);	
-			console.log("setMotor speed : %d time : %d", q.s, q.t);
+			if (log) console.log("setMotor speed : %d time : %d", q.s, q.t);
 			res.writeHead(200);		
 			return res.end();
 		} else if (pathname.startsWith ("/playSound")) {
-			console.log("playing sound : %d", q.v);
+			if (log) console.log("playing sound : %d", q.v);
 			if (duploTrain != null)
 				duploTrain.playSound(q.v);
 			res.writeHead(200);		
 			return res.end();
 		} else if (pathname.startsWith ("/setLED")) {
-			console.log("setting LED Color to : %d", q.v);
+			if (log) console.log("setting LED Color to : %d", q.v);
 			if (duploTrain != null)
-				duploTrain.setLEDColor(5);
+				duploTrain.setLEDColor(q.v);
 			res.writeHead(200);		
 			return res.end();
 		} else if (pathname.startsWith ("/getColor")) {
-			console.log("getColor returning %d", lastColor);
+			if (log) console.log("getColor returning %d", lastColor);
 			res.writeHead(200);		
 			return res.end("" + lastColor);
 		} else if (pathname.startsWith ("/getSpeed")) {
-			console.log("getSpeed : %d", i);
+			if (log) console.log("getSpeed : %d", lastSpeed);
 			res.writeHead(200);		
-			return res.end("" + i++);
+			return res.end("" + lastSpeed);
 		} else {
 			console.log("unk url : %s", req.url);
 			res.writeHead(200);
