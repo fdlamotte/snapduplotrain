@@ -3,31 +3,37 @@ const poweredUP = new PoweredUP.PoweredUP();
 const http = require('http');
 const url = require('url');
 const fs = require('fs');
-const log = false;
+
+const DUPLO_TRAIN_HUB = 5;
+
+const logurls = false;
+const logevents = false;
 
 var duploTrain;
-var lastColor = 0;
+var lastColor = -1;
 var lastSpeed = 0;
 
 poweredUP.on("discover", async (hub) => { // Wait to discover a Hub
 
     await hub.connect(); // Connect to the Hub
-
     console.log(`Connected to ${hub.name}!`);                                                  
-
     await hub.sleep(3000); // Sleep for 3 seconds before starting
 
-	hub.on("color", async (port, color) => {
-		if (log) console.log("color event %d", color);
-		lastColor = color;
-	});
+	if (hub.type == DUPLO_TRAIN_HUB) {
+		console.log("This is a Duplo Train !");
 
-	hub.on("speed", async (port, speed) => {
-		if (log) console.log("speed evend %d", speed);
-		lastSpeed = speed;
-	});
+		hub.on("color", async (port, color) => {
+			if (logevents) console.log("color event %d", color);
+			lastColor = color;
+		});
 
-	duploTrain = hub;
+		hub.on("speed", async (port, speed) => {
+			if (logevents) console.log("speed evend %d", speed);
+			lastSpeed = speed;
+		});
+
+		duploTrain = hub;
+	}
 });
 
 poweredUP.scan(); // Start scanning for Hubs
@@ -85,29 +91,34 @@ http.createServer(function (req, res) {
 		res.setHeader('Content-Type', 'text/html');
 
 		if (pathname.startsWith ("/setMotor")) {
-			if (duploTrain != null) 
-				duploTrain.setMotorSpeed("MOTOR", q.s, q.t);	
-			if (log) console.log("setMotor speed : %d time : %d", q.s, q.t);
+			if (duploTrain != null) {
+				duploTrain.setMotorSpeed("MOTOR", parseInt(q.s,10), parseInt(q.t, 10));	
+			}
+			if (logurls) console.log("setMotor speed : %d time : %d", q.s, q.t);
 			res.writeHead(200);		
 			return res.end();
 		} else if (pathname.startsWith ("/playSound")) {
-			if (log) console.log("playing sound : %d", q.v);
+			if (logurls) console.log("playing sound : %d", q.v);
 			if (duploTrain != null)
 				duploTrain.playSound(q.v);
 			res.writeHead(200);		
 			return res.end();
 		} else if (pathname.startsWith ("/setLED")) {
-			if (log) console.log("setting LED Color to : %d", q.v);
+			if (logurls) console.log("setting LED Color to : %d", q.v);
 			if (duploTrain != null)
 				duploTrain.setLEDColor(q.v);
 			res.writeHead(200);		
 			return res.end();
 		} else if (pathname.startsWith ("/getColor")) {
-			if (log) console.log("getColor returning %d", lastColor);
+			if (logurls) console.log("getColor returning %d", lastColor);
 			res.writeHead(200);		
 			return res.end("" + lastColor);
+		} else if (pathname.startsWith ("/resetColor")) {
+			if (logurls) console.log("color reset");
+			lastColor = -1;
+			return res.end();
 		} else if (pathname.startsWith ("/getSpeed")) {
-			if (log) console.log("getSpeed : %d", lastSpeed);
+			if (logurls) console.log("getSpeed : %d", lastSpeed);
 			res.writeHead(200);		
 			return res.end("" + lastSpeed);
 		} else {
